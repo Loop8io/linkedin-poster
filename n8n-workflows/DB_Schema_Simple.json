@@ -1,0 +1,40 @@
+{
+  "name": "LinkedIn Poster - DB Setup (Simple)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-1",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create all tables\nCREATE TABLE IF NOT EXISTS linkedin_posts (post_id VARCHAR(50) PRIMARY KEY, source VARCHAR(20) NOT NULL CHECK (source IN ('auto', 'manual')), topic VARCHAR(255) NOT NULL, draft_text TEXT NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'pending_review' CHECK (status IN ('pending_review', 'approved', 'posted', 'skipped', 'scheduled')), engagement_score INTEGER CHECK (engagement_score BETWEEN 0 AND 10), generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, posted_at TIMESTAMP, scheduled_for TIMESTAMP, linkedin_url VARCHAR(500), user_feedback TEXT, version INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);\n\nCREATE INDEX IF NOT EXISTS idx_linkedin_posts_generated_at ON linkedin_posts(generated_at DESC);\nCREATE INDEX IF NOT EXISTS idx_linkedin_posts_status ON linkedin_posts(status);\n\nCREATE TABLE IF NOT EXISTS writing_samples (sample_id SERIAL PRIMARY KEY, post_text TEXT NOT NULL, source VARCHAR(50) DEFAULT 'manual_input', posted_date DATE, engagement_metrics JSONB DEFAULT '{}'::jsonb, tags VARCHAR(100)[], created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);\n\nCREATE TABLE IF NOT EXISTS content_ideas (idea_id SERIAL PRIMARY KEY, topic VARCHAR(255) NOT NULL, hook TEXT, source VARCHAR(100), source_url VARCHAR(500), relevance_score INTEGER CHECK (relevance_score BETWEEN 0 AND 10), used BOOLEAN DEFAULT FALSE, used_in_post_id VARCHAR(50), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);\n\nCREATE TABLE IF NOT EXISTS auto_gen_settings (setting_key VARCHAR(50) PRIMARY KEY, setting_value TEXT NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);\n\nINSERT INTO auto_gen_settings (setting_key, setting_value) VALUES ('auto_gen_enabled', 'true'), ('schedule_time', '09:00'), ('schedule_timezone', 'America/Los_Angeles'), ('frequency', 'weekdays'), ('last_run', '') ON CONFLICT (setting_key) DO NOTHING;\n\nCREATE TABLE IF NOT EXISTS post_analytics (post_id VARCHAR(50) PRIMARY KEY, impressions INTEGER DEFAULT 0, likes INTEGER DEFAULT 0, comments INTEGER DEFAULT 0, shares INTEGER DEFAULT 0, clicks INTEGER DEFAULT 0, engagement_rate DECIMAL(5,2), last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);",
+        "options": {}
+      },
+      "id": "postgres-setup-1",
+      "name": "Execute All SQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [[{"node": "Execute All SQL", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

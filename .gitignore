@@ -1,0 +1,67 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# API Keys and credentials
+*.pem
+*.key
+*.cert
+credentials.json
+secrets.json
+
+# n8n local data
+.n8n/
+n8n-data/
+
+# Node modules (if using any local scripts)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if using any local scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# IDE and Editor files
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database dumps (if creating backups)
+*.sql.backup
+*.dump
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Personal notes (optional)
+notes.txt
+scratch.md
+TODO.personal.md

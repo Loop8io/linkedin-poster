@@ -1,0 +1,469 @@
+{
+  "name": "LinkedIn Poster - DB Schema Setup",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create linkedin_posts table\nCREATE TABLE IF NOT EXISTS linkedin_posts (\n    post_id VARCHAR(50) PRIMARY KEY,\n    source VARCHAR(20) NOT NULL CHECK (source IN ('auto', 'manual')),\n    topic VARCHAR(255) NOT NULL,\n    draft_text TEXT NOT NULL,\n    status VARCHAR(20) NOT NULL DEFAULT 'pending_review'\n        CHECK (status IN ('pending_review', 'approved', 'posted', 'skipped', 'scheduled')),\n    engagement_score INTEGER CHECK (engagement_score BETWEEN 0 AND 10),\n    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    posted_at TIMESTAMP,\n    scheduled_for TIMESTAMP,\n    linkedin_url VARCHAR(500),\n    user_feedback TEXT,\n    version INTEGER NOT NULL DEFAULT 1,\n    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "id": "create-posts-table",
+      "name": "Create linkedin_posts Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create indexes for linkedin_posts\nCREATE INDEX IF NOT EXISTS idx_linkedin_posts_generated_at ON linkedin_posts(generated_at DESC);\nCREATE INDEX IF NOT EXISTS idx_linkedin_posts_status ON linkedin_posts(status);\nCREATE INDEX IF NOT EXISTS idx_linkedin_posts_scheduled ON linkedin_posts(scheduled_for) WHERE status = 'scheduled';",
+        "options": {}
+      },
+      "id": "create-posts-indexes",
+      "name": "Create Posts Indexes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        680,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create writing_samples table\nCREATE TABLE IF NOT EXISTS writing_samples (\n    sample_id SERIAL PRIMARY KEY,\n    post_text TEXT NOT NULL,\n    source VARCHAR(50) DEFAULT 'manual_input',\n    posted_date DATE,\n    engagement_metrics JSONB DEFAULT '{}'::jsonb,\n    tags VARCHAR(100)[],\n    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "id": "create-samples-table",
+      "name": "Create writing_samples Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create index for writing_samples\nCREATE INDEX IF NOT EXISTS idx_writing_samples_tags ON writing_samples USING GIN(tags);",
+        "options": {}
+      },
+      "id": "create-samples-index",
+      "name": "Create Samples Index",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        680,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create content_ideas table\nCREATE TABLE IF NOT EXISTS content_ideas (\n    idea_id SERIAL PRIMARY KEY,\n    topic VARCHAR(255) NOT NULL,\n    hook TEXT,\n    source VARCHAR(100),\n    source_url VARCHAR(500),\n    relevance_score INTEGER CHECK (relevance_score BETWEEN 0 AND 10),\n    used BOOLEAN DEFAULT FALSE,\n    used_in_post_id VARCHAR(50),\n    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "id": "create-ideas-table",
+      "name": "Create content_ideas Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create index for content_ideas\nCREATE INDEX IF NOT EXISTS idx_content_ideas_unused ON content_ideas(used, relevance_score DESC) WHERE used = FALSE;",
+        "options": {}
+      },
+      "id": "create-ideas-index",
+      "name": "Create Ideas Index",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create auto_gen_settings table\nCREATE TABLE IF NOT EXISTS auto_gen_settings (\n    setting_key VARCHAR(50) PRIMARY KEY,\n    setting_value TEXT NOT NULL,\n    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "id": "create-settings-table",
+      "name": "Create auto_gen_settings Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insert default settings\nINSERT INTO auto_gen_settings (setting_key, setting_value) VALUES\n    ('auto_gen_enabled', 'true'),\n    ('schedule_time', '09:00'),\n    ('schedule_timezone', 'America/Los_Angeles'),\n    ('frequency', 'weekdays'),\n    ('last_run', '')\nON CONFLICT (setting_key) DO NOTHING;",
+        "options": {}
+      },
+      "id": "insert-default-settings",
+      "name": "Insert Default Settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create post_analytics table (future use)\nCREATE TABLE IF NOT EXISTS post_analytics (\n    post_id VARCHAR(50) PRIMARY KEY,\n    impressions INTEGER DEFAULT 0,\n    likes INTEGER DEFAULT 0,\n    comments INTEGER DEFAULT 0,\n    shares INTEGER DEFAULT 0,\n    clicks INTEGER DEFAULT 0,\n    engagement_rate DECIMAL(5,2),\n    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "id": "create-analytics-table",
+      "name": "Create post_analytics Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1340,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create update_updated_at function\nCREATE OR REPLACE FUNCTION update_updated_at_column()\nRETURNS TRIGGER AS $$\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
+        "options": {}
+      },
+      "id": "create-trigger-function",
+      "name": "Create Trigger Function",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1340,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Create triggers\nDROP TRIGGER IF EXISTS update_linkedin_posts_updated_at ON linkedin_posts;\nCREATE TRIGGER update_linkedin_posts_updated_at\n    BEFORE UPDATE ON linkedin_posts\n    FOR EACH ROW\n    EXECUTE FUNCTION update_updated_at_column();\n\nDROP TRIGGER IF EXISTS update_auto_gen_settings_updated_at ON auto_gen_settings;\nCREATE TRIGGER update_auto_gen_settings_updated_at\n    BEFORE UPDATE ON auto_gen_settings\n    FOR EACH ROW\n    EXECUTE FUNCTION update_updated_at_column();",
+        "options": {}
+      },
+      "id": "create-triggers",
+      "name": "Create Triggers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1560,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insert sample writing data\nINSERT INTO writing_samples (post_text, source, posted_date, tags) VALUES\n(\n    'My daughter walked into my customer meeting today because she needed her iPad unlocked. Immediately. \ud83d\udea8 I did the classic mom move - muted myself, unlocked it with one hand while nodding along...',\n    'linkedin',\n    '2024-01-15',\n    ARRAY['work-life-balance', 'personal-story', 'parenting', 'remote-work']\n)\nON CONFLICT DO NOTHING;",
+        "options": {}
+      },
+      "id": "insert-sample-1",
+      "name": "Insert Sample Post 1",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1780,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insert sample writing data\nINSERT INTO writing_samples (post_text, source, posted_date, tags) VALUES\n(\n    'Everyone''s talking about which AI model to use. Meanwhile, I''m over here trying to get an ML model to talk to a 15-year-old legacy application that''s running the entire business \ud83d\ude05',\n    'linkedin',\n    '2024-02-20',\n    ARRAY['ai', 'legacy-systems', 'integration', 'real-world-challenges']\n)\nON CONFLICT DO NOTHING;",
+        "options": {}
+      },
+      "id": "insert-sample-2",
+      "name": "Insert Sample Post 2",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1780,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "XoPBig6C7Dh81i8Y",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      message: '\u2705 Database schema setup complete!',\n      tables_created: [\n        'linkedin_posts',\n        'writing_samples',\n        'content_ideas',\n        'auto_gen_settings',\n        'post_analytics'\n      ],\n      indexes_created: 4,\n      triggers_created: 2,\n      sample_posts_inserted: 2,\n      next_steps: [\n        'Start building n8n workflows',\n        'Configure Slack bot',\n        'Add Claude API credentials'\n      ]\n    }\n  }\n];"
+      },
+      "id": "success-message",
+      "name": "Success Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create linkedin_posts Table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create writing_samples Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create linkedin_posts Table": {
+      "main": [
+        [
+          {
+            "node": "Create Posts Indexes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Posts Indexes": {
+      "main": [
+        [
+          {
+            "node": "Create content_ideas Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create writing_samples Table": {
+      "main": [
+        [
+          {
+            "node": "Create Samples Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Samples Index": {
+      "main": [
+        [
+          {
+            "node": "Create auto_gen_settings Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create content_ideas Table": {
+      "main": [
+        [
+          {
+            "node": "Create Ideas Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Ideas Index": {
+      "main": [
+        [
+          {
+            "node": "Create post_analytics Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create auto_gen_settings Table": {
+      "main": [
+        [
+          {
+            "node": "Insert Default Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Default Settings": {
+      "main": [
+        [
+          {
+            "node": "Create Trigger Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create post_analytics Table": {
+      "main": [
+        [
+          {
+            "node": "Create Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Trigger Function": {
+      "main": [
+        [
+          {
+            "node": "Create Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Triggers": {
+      "main": [
+        [
+          {
+            "node": "Insert Sample Post 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert Sample Post 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Sample Post 1": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Sample Post 2": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
